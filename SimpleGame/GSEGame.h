@@ -1,5 +1,6 @@
 #pragma once
 #include "Renderer.h"
+#include "GSEObjectMgr.h"
 
 class GSEGame
 {
@@ -9,7 +10,7 @@ public:
 	void DrawAll();
 
 private:
-	Renderer *m_renderer;
-
+	Renderer *m_Renderer;
+	GSEObjectMgr* m_ObjectMgr;
 };
 

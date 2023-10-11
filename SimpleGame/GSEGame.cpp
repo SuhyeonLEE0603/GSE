@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "GSEGame.h"
+#include <math.h>
 
 GSEGame::GSEGame(int windowSizeX, int windowSizeY)
 {
@@ -7,10 +8,21 @@ GSEGame::GSEGame(int windowSizeX, int windowSizeY)
 
 	m_ObjectMgr = new GSEObjectMgr();
 
-	int id = m_ObjectMgr->AddObject(0, 0, 0);
+	// create test objects
+	for (int i = 0; i < 1000; ++i) {
+		float x = (500.f * (float)rand() / (float)RAND_MAX) - 250.f;
+		float y = (500.f * (float)rand() / (float)RAND_MAX) - 250.f;
+		float z = (500.f * (float)rand() / (float)RAND_MAX) - 250.f;
 
-	m_ObjectMgr->DeleteObject(id);
+		float sX = 5.f * (float)rand() / (float)RAND_MAX;
+		float sY = 5.f * (float)rand() / (float)RAND_MAX;
+		float sZ = 5.f * (float)rand() / (float)RAND_MAX;
+		int id = m_ObjectMgr->AddObject(x, y, z, sX, sY, sZ);
+		
+	}
+
 }
+
 
 GSEGame::~GSEGame()
 {
@@ -19,9 +31,13 @@ GSEGame::~GSEGame()
 
 	delete m_ObjectMgr;
 	m_ObjectMgr = NULL;
+
 }
 
 void GSEGame::DrawAll()
 {
-	m_Renderer->DrawSolidRect(0, 0, 0, 10, 1, 1, 1, 1);
+	// objmgr
+	if (m_Renderer != NULL) {
+		m_ObjectMgr->DrawAllObjects(m_Renderer);
+	}
 }

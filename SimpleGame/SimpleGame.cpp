@@ -12,18 +12,35 @@ but WITHOUT ANY WARRANTY.
 #include <iostream>
 #include "Dependencies\glew.h"
 #include "Dependencies\freeglut.h"
+#include "timeapi.h"
 
 #include "GSEGame.h"
 
 GSEGame* g_game = NULL;
+DWORD g_startTime = 0;
+DWORD g_prevTime = 0;
 
 void RenderScene(void)
 {
+	DWORD elapsedTime = 0;
+	DWORD currentTime = timeGetTime();
+	if (g_prevTime == 0) {
+		elapsedTime = currentTime - g_startTime;
+	}
+	else {
+		elapsedTime = currentTime - g_prevTime;
+	}
+	g_prevTime = currentTime;
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearColor(0.0f, 0.3f, 0.3f, 1.0f);
+	timeGetTime();
+	
+	// elapsed time (ms -> s)
+	float elapsedTimeinSEc = (float)elapsedTime / 1000.f;
 
 	// Renderer Test
-	g_game->DrawAll();
+	g_game->DrawAll(elapsedTime);
 
 	glutSwapBuffers();
 }
@@ -76,6 +93,7 @@ int main(int argc, char **argv)
 	glutMouseFunc(MouseInput);
 	glutSpecialFunc(SpecialKeyInput);
 
+	g_startTime = timeGetTime();
 	glutMainLoop();
 
 	delete g_game;

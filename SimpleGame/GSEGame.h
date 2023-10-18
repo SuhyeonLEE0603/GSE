@@ -7,7 +7,7 @@ class GSEGame
 public:
 	GSEGame(int windowSizeX, int windowSizeY);
 	~GSEGame();
-	void DrawAll();
+	void DrawAll(float elapsedTime);
 
 private:
 	Renderer *m_Renderer;

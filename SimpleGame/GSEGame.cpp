@@ -17,8 +17,27 @@ GSEGame::GSEGame(int windowSizeX, int windowSizeY)
 		float sX = 5.f * (float)rand() / (float)RAND_MAX;
 		float sY = 5.f * (float)rand() / (float)RAND_MAX;
 		float sZ = 5.f * (float)rand() / (float)RAND_MAX;
-		int id = m_ObjectMgr->AddObject(x, y, z, sX, sY, sZ);
-		
+
+		float mass = 1.f;
+
+		float velX = (10.f * (float)rand() / (float)RAND_MAX) - 5.0f;
+		float velY = (10.f * (float)rand() / (float)RAND_MAX) - 5.0f;
+		float velZ = (10.f * (float)rand() / (float)RAND_MAX) - 5.0f;
+
+		float accX = 0.f;
+		float accY = -20.f;
+		float accZ = 0.f;
+
+		float forceX = 0.f;
+		float forceY = 0.f;
+		float forceZ = 0.f;
+
+		int id = m_ObjectMgr->AddObject(x, y, z, 
+			sX, sY, sZ,
+			mass,
+			velX, velY, velZ,
+			accX, accY, accZ,
+			forceX, forceY, forceZ);
 	}
 
 }
@@ -34,10 +53,11 @@ GSEGame::~GSEGame()
 
 }
 
-void GSEGame::DrawAll()
+void GSEGame::DrawAll(float elapsedTime)
 {
 	// objmgr
 	if (m_Renderer != NULL) {
-		m_ObjectMgr->DrawAllObjects(m_Renderer);
+		m_ObjectMgr->UpdateAllObjects(elapsedTime);
+		m_ObjectMgr->DrawAllObjects(m_Renderer, elapsedTime);
 	}
 }

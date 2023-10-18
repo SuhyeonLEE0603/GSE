@@ -20,7 +20,12 @@ GSEObjectMgr::~GSEObjectMgr()
 	}
 }
 
-int GSEObjectMgr::AddObject(float x, float y, float z, float sx, float sy, float sz)
+int GSEObjectMgr::AddObject(float posX, float posY, float posZ,
+							float sizeX, float sizeY, float sizeZ,
+							float mass,
+							float velX, float velY, float velZ,
+							float accX, float accY, float accZ,
+							float forceX, float forceY, float forceZ)
 {
 	// Find empty slot
 	int index = -1;
@@ -32,8 +37,12 @@ int GSEObjectMgr::AddObject(float x, float y, float z, float sx, float sy, float
 	}
 	if (index >= 0) {
 		m_Objects[index] = new GSEObject();
-		m_Objects[index]->SetPos(x, y, z);
-		m_Objects[index]->SetSize(sx, sy, sz);
+		m_Objects[index]->SetPos(posX, posY, posZ);
+		m_Objects[index]->SetSize(sizeX, sizeY, sizeZ);
+		m_Objects[index]->SetMass(mass);
+		m_Objects[index]->SetVel(velX, velY, velZ);
+		m_Objects[index]->SetAcc(accX, accY, accZ);
+		m_Objects[index]->SetForce(forceX, forceY, forceZ);
 		return index;
 	}
 
@@ -54,11 +63,20 @@ bool GSEObjectMgr::DeleteObject(int id)
 	return false;
 }
 
-void GSEObjectMgr::DrawAllObjects(Renderer* renderer)
+void GSEObjectMgr::DrawAllObjects(Renderer* renderer, float elapsedTime)
 {
 	for (int i = 0; i < MAX_NUM_OBJECT; ++i) {
 		if (m_Objects[i] != NULL) {
 			m_Objects[i]->Draw(renderer);
+		}
+	}
+}
+
+void GSEObjectMgr::UpdateAllObjects(float elapsedTime)
+{
+	for (int i = 0; i < MAX_NUM_OBJECT; ++i) {
+		if (m_Objects[i] != NULL) {
+			m_Objects[i]->Update(elapsedTime);
 		}
 	}
 }

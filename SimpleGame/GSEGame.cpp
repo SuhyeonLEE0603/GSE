@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "GSEGame.h"
-#include <math.h>
 
 GSEGame::GSEGame(int windowSizeX, int windowSizeY)
 {

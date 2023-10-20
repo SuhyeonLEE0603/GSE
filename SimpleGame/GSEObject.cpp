@@ -25,6 +25,7 @@ GSEObject::GSEObject()
 	m_forceY = 0.f;
 	m_forceZ = 0.f;
 
+	m_type = TYPE_DEFAULT;
 }
 
 GSEObject::~GSEObject()

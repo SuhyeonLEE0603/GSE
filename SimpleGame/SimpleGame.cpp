@@ -14,9 +14,12 @@ but WITHOUT ANY WARRANTY.
 #include "Dependencies\freeglut.h"
 #include "timeapi.h"
 
+#include "GSEGlobal.h"
 #include "GSEGame.h"
+#include "GSEUserInterface.h"
 
 GSEGame* g_game = NULL;
+GSEUserInterface* g_userInterface = NULL;
 DWORD g_startTime = 0;
 DWORD g_prevTime = 0;
 
@@ -39,6 +42,9 @@ void RenderScene(void)
 	// elapsed time (ms -> s)
 	float elapsedTimeinSEc = (float)elapsedTime / 1000.f;
 
+	// send key inputs
+	g_game->KeyInput(g_userInterface);
+
 	// Renderer Test
 	g_game->DrawAll(elapsedTime);
 
@@ -60,9 +66,16 @@ void KeyInput(unsigned char key, int x, int y)
 	RenderScene();
 }
 
-void SpecialKeyInput(int key, int x, int y)
+void SpecialKeyDownInput(int id, int x, int y)
 {
-	RenderScene();
+	unsigned char key = '~';
+	g_userInterface->KeyDown(key, id);
+}
+
+void SpecialKeyUpInput(int id, int x, int y)
+{
+	unsigned char key = '~';
+	g_userInterface->KeyUp(key, id);
 }
 
 int main(int argc, char **argv)
@@ -85,13 +98,15 @@ int main(int argc, char **argv)
 	}
 
 	// Initialize Renderer
+	g_userInterface = new GSEUserInterface();
 	g_game = new GSEGame(500, 500);
 
 	glutDisplayFunc(RenderScene);			// 콜백 함수들, 함수 포인터를 넘겨줌
 	glutIdleFunc(Idle);
 	glutKeyboardFunc(KeyInput);
 	glutMouseFunc(MouseInput);
-	glutSpecialFunc(SpecialKeyInput);
+	glutSpecialFunc(SpecialKeyDownInput);
+	glutSpecialUpFunc(SpecialKeyUpInput);
 
 	g_startTime = timeGetTime();
 	glutMainLoop();

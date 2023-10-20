@@ -40,13 +40,13 @@ void RenderScene(void)
 	timeGetTime();
 	
 	// elapsed time (ms -> s)
-	float elapsedTimeinSEc = (float)elapsedTime / 1000.f;
+	float elapsedTimeinSec = (float)elapsedTime / 1000.f;
 
 	// send key inputs
 	g_game->KeyInput(g_userInterface);
 
 	// Renderer Test
-	g_game->DrawAll(elapsedTime);
+	g_game->DrawAll(elapsedTimeinSec);
 
 	glutSwapBuffers();
 }

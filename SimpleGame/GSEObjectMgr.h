@@ -18,6 +18,8 @@ public:
 
 	void SetObjectVel(int id, float vx, float vy, float vz);
 
+	void AddObjectForce(int id, float x, float y, float z, float elapsedTime);
+
 	bool DeleteObject(int id);
 
 	void DrawAllObjects(Renderer* renderer, float elapsedTime);

@@ -8,7 +8,8 @@ GSEGame::GSEGame(int windowSizeX, int windowSizeY)
 	m_ObjectMgr = new GSEObjectMgr();
 
 	// create hero object
-	m_Heroid = m_ObjectMgr->AddObject(0, 0, 0,
+	m_Heroid = m_ObjectMgr->AddObject(
+		0, 0, 0,
 		30, 30, 30,
 		1,
 		0, 0, 0,
@@ -71,26 +72,28 @@ void GSEGame::DrawAll(float elapsedTime)
 	}
 }
 
-void GSEGame::KeyInput(GSEUserInterface* ui)
+void GSEGame::KeyInput(GSEUserInterface* ui, float elapsedTime)
 {
-	float vx, vy, vz;
-	vx = vy = vz = 0.f;
-	float velAmount = 100.f;
+	float x, y, z;
+	x = y = z = 0.f;
+	float forceAmount = 2000.f;
 	if (ui->Is_SP_Arrow_Up_Down())
 	{
-		vy += velAmount;
+		y += forceAmount;
 	}
 	if (ui->Is_SP_Arrow_Down_Down())
 	{
-		vy -= velAmount;
+		y -= forceAmount;
 	}
 	if (ui->Is_SP_Arrow_Right_Down())
 	{
-		vx += velAmount;
+		x += forceAmount;
 	}
 	if (ui->Is_SP_Arrow_Left_Down())
 	{
-		vx -= velAmount;
+		x -= forceAmount;
 	}
-	m_ObjectMgr->SetObjectVel(m_Heroid, vx, vy, vz);
+	//m_ObjectMgr->SetObjectVel(m_Heroid, x, y, z);
+	// add force
+	m_ObjectMgr->AddObjectForce(m_Heroid, x, y, z, elapsedTime);
 }

@@ -64,6 +64,18 @@ void GSEObjectMgr::SetObjectVel(int id, float vx, float vy, float vz)
 	}
 }
 
+void GSEObjectMgr::AddObjectForce(int id, float x, float y, float z, float elapsedTime)
+{
+	if (m_Objects[id] != NULL)
+	{
+		m_Objects[id]->AddForce(x, y, z, elapsedTime);
+	}
+	else
+	{
+		// log..
+	}
+}
+
 bool GSEObjectMgr::DeleteObject(int id)
 {
 	if (m_Objects[id] != NULL) {

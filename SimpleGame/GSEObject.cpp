@@ -88,12 +88,79 @@ void GSEObject::Update(float elapsedTime)
 	//m_accZ = m_forceZ / m_mass;
 
 	// vel
-	m_velX = m_velX + m_accX * t;
-	m_velY = m_velY + m_accY * t;
-	m_velZ = m_velZ + m_accZ * t;
+	//m_velX = m_velX + m_accX * t;
+	//m_velY = m_velY + m_accY * t;
+	//m_velZ = m_velZ + m_accZ * t;
 
 	// pos
-	m_posX = m_posX + m_velX * t + 0.5f * m_accX * tt;
-	m_posY = m_posY + m_velY * t + 0.5f * m_accY * tt;
-	m_posZ = m_posZ + m_velZ * t + 0.5f * m_accZ * tt;
+	//m_posX = m_posX + m_velX * t + 0.5f * m_accX * tt;
+	//m_posY = m_posY + m_velY * t + 0.5f * m_accY * tt;
+	//m_posZ = m_posZ + m_velZ * t + 0.5f * m_accZ * tt;
+
+	// m_velX ... apply friction
+	// clac normal force
+	float normalForce = m_mass * GRAVITY;
+
+	float frictionCoef = 100.f;
+
+	float friction = frictionCoef + normalForce;
+
+	float frictionDirX = -m_velX;
+	float frictionDirY = -m_velY;
+
+	float mag = sqrtf(frictionDirX * frictionDirX + frictionDirY * frictionDirY);
+
+	if (mag > FLT_EPSILON) {
+		frictionDirX = frictionDirX / mag;
+		frictionDirY = frictionDirY / mag;
+
+		float frictionForceX = frictionDirX * friction;
+		float frictionForceY = frictionDirY * friction;
+
+		float frictionAccX = frictionForceX / m_mass;
+		float frictionAccY = frictionForceY / m_mass;
+
+		float resultVelX = m_velX + frictionAccX * elapsedTime;
+		float resultVelY = m_velY + frictionAccY * elapsedTime;
+		float resultVelZ = m_velZ;
+
+		if (resultVelX * m_velX < 0.f) {
+			m_velX = 0.f;
+		}
+		else {
+			m_velX = resultVelX;
+		}
+
+		if (resultVelY * m_velY < 0.f) {
+			m_velY = 0.f;
+		}
+		else {
+			m_velY = resultVelY;
+		}
+
+		if (resultVelZ * m_velZ < 0.f) {
+			m_velZ = 0.f;
+		}
+		else {
+			m_velZ = resultVelZ;
+		}
+	}
+	
+	m_posX = m_posX + m_velX * t;
+	m_posY = m_posY + m_velY * t;
+	m_posZ = m_posZ + m_velZ * t;
+
+
+}
+
+void GSEObject::AddForce(float x, float y, float z, float elapsedTime)
+{
+	// calc acc
+	float accX = x / m_mass;
+	float accY = y / m_mass;
+	float accZ = z / m_mass;
+
+	m_velX = m_velX + accX * elapsedTime;
+	m_velY = m_velY + accY * elapsedTime;
+	m_velZ = m_velZ + accZ * elapsedTime;
 }

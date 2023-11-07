@@ -8,6 +8,9 @@ GSEUserInterface::GSEUserInterface()
 	m_SP_Arrow_Down = false;
 	m_SP_Arrow_Left = false;
 	m_SP_Arrow_Right = false;
+
+	m_Spacebar = false;
+
 }
 
 GSEUserInterface::~GSEUserInterface()
@@ -18,6 +21,8 @@ void GSEUserInterface::KeyDown(char key, int id)
 {
 	switch (key)
 	{
+	case ' ':
+		m_Spacebar = true;
 	default:
 		break;
 	}
@@ -42,12 +47,15 @@ void GSEUserInterface::KeyDown(char key, int id)
 	}
 
 	std::cout << m_SP_Arrow_Left << m_SP_Arrow_Up << m_SP_Arrow_Right << m_SP_Arrow_Down << std::endl;
+	std::cout << m_Spacebar << std::endl;
 }
 
 void GSEUserInterface::KeyUp(char key, int id)
 {
 	switch (key)
 	{
+	case ' ':
+		m_Spacebar = false;
 	default:
 		break;
 	}
@@ -90,4 +98,9 @@ bool GSEUserInterface::Is_SP_Arrow_Left_Down()
 bool GSEUserInterface::Is_SP_Arrow_Right_Down()
 {
 	return m_SP_Arrow_Right;
+}
+
+bool GSEUserInterface::Is_Spacebar_Down()
+{
+	return m_Spacebar;
 }

@@ -46,6 +46,13 @@ void GSEObject::SetPos(float x, float y, float z)
 	m_posZ = z;
 }
 
+void GSEObject::GetPos(float* x, float* y, float* z)
+{
+	*x = m_posX;
+	*y = m_posY;
+	*z = m_posZ;
+}
+
 void GSEObject::SetMass(float mass)
 {
 	m_mass = mass;
@@ -56,6 +63,13 @@ void GSEObject::SetVel(float x, float y, float z)
 	m_velX = x;
 	m_velY = y;
 	m_velZ = z;
+}
+
+void GSEObject::GetVel(float* x, float* y, float* z)
+{
+	*x = m_velX;
+	*y = m_velY;
+	*z = m_velZ;
 }
 
 void GSEObject::SetAcc(float x, float y, float z)
@@ -70,6 +84,11 @@ void GSEObject::SetForce(float x, float y, float z)
 	m_forceX = x;
 	m_forceY = y;
 	m_forceZ = z;
+}
+
+void GSEObject::SetType(int type)
+{
+	m_type = type;
 }
 
 void GSEObject::Draw(Renderer* renderer)
@@ -101,7 +120,7 @@ void GSEObject::Update(float elapsedTime)
 	// clac normal force
 	float normalForce = m_mass * GRAVITY;
 
-	float frictionCoef = 100.f;
+	float frictionCoef = 1000.f;
 
 	float friction = frictionCoef + normalForce;
 

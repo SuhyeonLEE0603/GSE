@@ -44,6 +44,7 @@ int GSEObjectMgr::AddObject(float posX, float posY, float posZ,
 		m_Objects[index]->SetVel(velX, velY, velZ);
 		m_Objects[index]->SetAcc(accX, accY, accZ);
 		m_Objects[index]->SetForce(forceX, forceY, forceZ);
+		m_Objects[index]->SetType(type);
 		return index;
 	}
 
@@ -61,6 +62,29 @@ void GSEObjectMgr::SetObjectVel(int id, float vx, float vy, float vz)
 	else 
 	{
 			// log..
+	}
+}
+
+void GSEObjectMgr::GetObjectVel(int id, float* vx, float* vy, float* vz)
+{
+	if (m_Objects[id] != NULL)
+	{
+		m_Objects[id]->GetVel(vx, vy, vz);
+	}
+	else {
+
+	}
+
+}
+
+void GSEObjectMgr::GetObjectPos(int id, float* x, float* y, float* z)
+{
+	if (m_Objects[id] != NULL)
+	{
+		m_Objects[id]->GetPos(x, y, z);
+	}
+	else {
+
 	}
 }
 

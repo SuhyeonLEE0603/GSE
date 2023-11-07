@@ -17,6 +17,8 @@ public:
 				  int type);
 
 	void SetObjectVel(int id, float vx, float vy, float vz);
+	void GetObjectVel(int id, float* vx, float* vy, float* vz);
+	void GetObjectPos(int id, float* x, float* y, float* z);
 
 	void AddObjectForce(int id, float x, float y, float z, float elapsedTime);
 

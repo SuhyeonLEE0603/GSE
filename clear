@@ -1,0 +1,77 @@
+[33mcommit 1288d87077a3d283430a4129d616d2bf06475b13[m[33m ([m[1;36mHEAD -> [m[1;32mdev0[m[33m, [m[1;32mupdateAndGarbage[m[33m)[m
+Author: Lee Su Hyeon <dltngus12323@gmail.com>
+Date:   Tue Nov 21 01:31:08 2023 +0900
+
+    update project file
+
+[33mcommit 54c75c3c8d899384718bb375c407d1a7eb29e5a5[m
+Author: Lee Su Hyeon <dltngus12323@gmail.com>
+Date:   Tue Nov 21 01:26:57 2023 +0900
+
+    add garbage collector api, apply renderer updates and sound, image, loader ...
+
+[33mcommit 65b15094b6de6b936d18e89c52a05aaf698deec2[m[33m ([m[1;31morigin/dev0[m[33m)[m
+Author: Lee Su Hyeon <dltngus12323@gmail.com>
+Date:   Wed Nov 8 00:49:39 2023 +0900
+
+    add bullet firing system
+
+[33mcommit 430b242053abec36564201cee7b3be2c9b0d3a64[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m
+Author: Lee Su Hyeon <dltngus12323@gmail.com>
+Date:   Sat Nov 4 17:52:07 2023 +0900
+
+    character movement using force, apply friction to all objects
+
+[33mcommit 72440f143025c6033f9a23eeb4c5bdd615720452[m
+Author: Lee Su Hyeon <dltngus12323@gmail.com>
+Date:   Fri Oct 20 23:07:07 2023 +0900
+
+    modifing elapsed time: ms -> s
+
+[33mcommit e1c81acb99bf6033abe1fa0a3e706e5a26ee8139[m
+Author: Lee Su Hyeon <dltngus12323@gmail.com>
+Date:   Fri Oct 20 22:50:00 2023 +0900
+
+    delete including math.h
+
+[33mcommit 09ad659c5860ddaa43db14b18c2855acf7049d42[m
+Author: Lee Su Hyeon <dltngus12323@gmail.com>
+Date:   Fri Oct 20 22:36:31 2023 +0900
+
+    add ui(Input class), Object type, keyinput event, hero Object(Player)
+
+[33mcommit 1c5bc7511e8c2438f364d461ff4135302b2963fe[m
+Author: Lee Su Hyeon <dltngus12323@gmail.com>
+Date:   Wed Oct 18 22:28:40 2023 +0900
+
+    add update api to Object class
+
+[33mcommit 78508dd5dd52561963fe1431fc7e25fd6f491ce3[m
+Author: Lee Su Hyeon <dltngus12323@gmail.com>
+Date:   Thu Oct 12 03:43:38 2023 +0900
+
+    Add renderer to object class, test code
+
+[33mcommit d68498c6608f2a3d59b7ce976d8bfc631105d698[m
+Author: Lee Su Hyeon <dltngus12323@gmail.com>
+Date:   Wed Oct 11 18:38:46 2023 +0900
+
+    Update README.md
+
+[33mcommit 5dbbe8f6d7f693fe9130357b871380ce4e5622cc[m
+Author: Lee Su Hyeon <dltngus12323@gmail.com>
+Date:   Wed Oct 11 00:43:01 2023 +0900
+
+    Add object, objectmgr classes
+
+[33mcommit e97e5fd90498134d657c6e5304a87618c20140b2[m
+Author: Lee Su Hyeon <dltngus12323@gmail.com>
+Date:   Tue Oct 10 03:09:46 2023 +0900
+
+    Frist Commit
+
+[33mcommit 67bc85623e72a0793a63920811ce64622f5dfd40[m
+Author: Suhyeon Lee <dltngus12323@gmail.com>
+Date:   Mon Oct 9 17:41:26 2023 +0000
+
+    Initial commit

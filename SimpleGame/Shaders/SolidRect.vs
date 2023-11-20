@@ -1,13 +1,19 @@
 #version 330
 
 in vec3 a_Position;
-uniform vec4 u_Trans;
+
+uniform vec3 u_Trans;
+uniform vec3 u_Scale;
+
+uniform mat4 u_ProjView;
+uniform mat4 u_RotToCam;
 
 void main()
 {
 	vec4 newPosition;
-	newPosition.xy = a_Position.xy*u_Trans.w + u_Trans.xy;
-	newPosition.z = 0;
-	newPosition.w= 1;
-	gl_Position = newPosition;
+	newPosition.xyz = a_Position.xyz*u_Scale;
+	newPosition.w= 1.0;
+	newPosition =  u_RotToCam * newPosition;
+	newPosition.xyz += u_Trans.xyz;
+	gl_Position = u_ProjView * newPosition;
 }

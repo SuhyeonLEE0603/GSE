@@ -3,30 +3,89 @@
 
 Renderer::Renderer(int windowSizeX, int windowSizeY)
 {
+	//default settings
+	glClearDepth(1.f);
+
 	Initialize(windowSizeX, windowSizeY);
 }
 
 
 Renderer::~Renderer()
 {
+	//delete all resources here
+	glDeleteShader(m_SolidRectShader);
+	glDeleteShader(m_TextureRectShader);
+	glDeleteShader(m_SOlidRectGaugeShader);
+	glDeleteShader(m_TextureRectAnimShader);
+	glDeleteShader(m_ParticleShader);
+	glDeleteBuffers(1, &m_VBORect);
+	glDeleteBuffers(1, &m_VBORectBorder);
+	glDeleteTextures(1, &m_ShadowTexture);
+	for (int i = 0; i < MAX_TEXTURES; i++)
+	{
+		DeleteTexture(i);
+	}
+	for (int i = 0; i < MAX_PARTICLES; i++)
+	{
+		DeleteParticle(i);
+	}
 }
 
 void Renderer::Initialize(int windowSizeX, int windowSizeY)
 {
+	//Initialize Texture arrays
+	for (int i = 0; i < MAX_TEXTURES; i++)
+	{
+		m_Textures[i] = -1;
+	}
+	for (int i = 0; i < MAX_PARTICLES; i++)
+	{
+		m_Particles[i].VBO = -1;
+		m_Particles[i].VertexCount = -1;
+	}
+
 	//Set window size
 	m_WindowSizeX = windowSizeX;
 	m_WindowSizeY = windowSizeY;
 
 	//Load shaders
 	m_SolidRectShader = CompileShaders("./Shaders/SolidRect.vs", "./Shaders/SolidRect.fs");
+	m_SOlidRectGaugeShader = CompileShaders("./Shaders/SolidRectGauge.vs", "./Shaders/SolidRectGauge.fs");
+	m_TextureRectShader = CompileShaders("./Shaders/TextureRect.vs", "./Shaders/TextureRect.fs");
+	m_TextureRectAnimShader = CompileShaders("./Shaders/TextureRectAnim.vs", "./Shaders/TextureRectAnim.fs");
+	m_ParticleShader = CompileShaders("./Shaders/Particle.vs", "./Shaders/Particle.fs");
+
+	//Gen shadow texture
+	m_ShadowTexture = GenPngTexture("./Dependencies/shadow.png");
 	
 	//Create VBOs
 	CreateVertexBufferObjects();
 
-	if (m_SolidRectShader > 0 && m_VBORect > 0)
-	{
-		m_Initialized = true;
-	}
+	//Initialize camera settings
+	m_v3Camera_Position = glm::vec3(0.f, 0.f, 1000.f);
+	m_v3Camera_Lookat = glm::vec3(0.f, 0.f, 0.f);
+	m_v3Camera_Up = glm::vec3(0.f, 1.f, 0.f);
+	m_m4View = glm::lookAt(
+		m_v3Camera_Position,
+		m_v3Camera_Lookat,
+		m_v3Camera_Up
+	);
+
+	//Initialize projection matrix
+	m_m4OrthoProj = glm::ortho(
+		-(float)windowSizeX/2.f, (float)windowSizeX/2.f, 
+		-(float)windowSizeY/2.f, (float)windowSizeY/2.f,
+		0.0001f, 10000.f);
+	m_m4PersProj = glm::perspectiveRH(45.f, 1.f, 1.f, 1000.f);
+
+	//Initialize projection-view matrix
+	m_m4ProjView = m_m4OrthoProj * m_m4View; //use ortho at this time
+	//m_m4ProjView = m_m4PersProj * m_m4View;
+
+	//Initialize model transform matrix :; used for rotating quad normal to parallel to camera direction
+	m_m4Model = glm::rotate(glm::mat4(1.0f), glm::radians(0.f), glm::vec3(1.f, 0.f, 0.f));
+
+	m_Initialized = true;
 }
 
 bool Renderer::IsInitialized()
@@ -34,18 +93,354 @@ bool Renderer::IsInitialized()
 	return m_Initialized;
 }
 
+void Renderer::SetCameraPos(
+	float x, float y)
+{
+	m_v3Camera_Position = glm::vec3(x, y, 1000.f);
+	m_v3Camera_Lookat = glm::vec3(x, y, 0.f);
+	m_v3Camera_Up = glm::vec3(0.f, 1.f, 0.f);
+	m_m4View = glm::lookAt(
+		m_v3Camera_Position,
+		m_v3Camera_Lookat,
+		m_v3Camera_Up
+	);
+	m_m4ProjView = m_m4OrthoProj * m_m4View;
+}
+
 void Renderer::CreateVertexBufferObjects()
 {
+	float rectSize = 0.5f;
 	float rect[]
 		=
 	{
-		-1.f / m_WindowSizeX, -1.f / m_WindowSizeY, 0.f, -1.f / m_WindowSizeX, 1.f / m_WindowSizeY, 0.f, 1.f / m_WindowSizeX, 1.f / m_WindowSizeY, 0.f, //Triangle1
-		-1.f / m_WindowSizeX, -1.f / m_WindowSizeY, 0.f,  1.f / m_WindowSizeX, 1.f / m_WindowSizeY, 0.f, 1.f / m_WindowSizeX, -1.f / m_WindowSizeY, 0.f, //Triangle2
+		-rectSize, -rectSize, 0.f, -rectSize, rectSize, 0.f, rectSize, rectSize, 0.f, //Triangle1
+		-rectSize, -rectSize, 0.f,  rectSize, rectSize, 0.f, rectSize, -rectSize, 0.f, //Triangle2
 	};
 
 	glGenBuffers(1, &m_VBORect);
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBORect);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(rect), rect, GL_STATIC_DRAW);
+
+	float rectBorder[]
+		=
+	{
+		-rectSize, -rectSize, 0.f,
+		-rectSize, rectSize, 0.f,
+		rectSize, rectSize, 0.f,
+		rectSize, -rectSize, 0.f,
+	};
+
+	glGenBuffers(1, &m_VBORectBorder);
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBORectBorder);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(rectBorder), rectBorder, GL_STATIC_DRAW);
+}
+
+int Renderer::GenPngTexture(char * filePath, GLuint sampling)
+{
+	//find empty slot
+	int idx = -1;
+	for (int i = 0; i < MAX_TEXTURES; i++)
+	{
+		if (m_Textures[i] == -1)
+		{
+			idx = i;
+			break;
+		}
+	}
+	if (idx == -1)
+	{
+		std::cout << "Can't gen more textures." << std::endl;
+		return -1;
+	}
+
+	//Load Pngs
+	std::vector<unsigned char> image;
+	unsigned width, height;
+	unsigned error = lodepng::decode(image, width, height, filePath);
+	if (error != 0)
+	{
+		cout << "PNG Image Loading Failed : " << filePath << endl;
+		assert(0);
+	}
+
+	GLuint temp;
+	glGenTextures(1, &temp);
+
+	if (temp < 0)
+	{
+		cout << "PNG Texture Creation Failed : " << filePath << endl;
+		assert(0);
+	}
+
+	glBindTexture(GL_TEXTURE_2D, temp);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampling);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, sampling);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, &image[0]);
+	
+	m_Textures[idx] = temp;
+	
+	return idx;
+}
+
+int Renderer::GenBmpTexture(char * filePath, GLuint sampling)
+{
+	//find empty slot
+	int idx = -1;
+	for (int i = 0; i < MAX_TEXTURES; i++)
+	{
+		if (m_Textures[i] == -1)
+		{
+			idx = i;
+			break;
+		}
+	}
+	if (idx == -1)
+	{
+		std::cout << "Can't gen more textures." << std::endl;
+		return -1;
+	}
+
+	unsigned int width, height;
+
+	const unsigned char* rawImage = loadBMP::loadBMPRaw(filePath, width, height, false);
+
+	if (rawImage == NULL)
+	{
+		cout << "BMP Image Loading Failed : " << filePath << endl;
+		assert(0);
+	}
+
+	GLuint temp;
+	glGenTextures(1, &temp);
+
+	if (temp < 0)
+	{
+		cout << "BMP Texture Creation Failed : " << filePath << endl;
+		assert(0);
+	}
+
+	glBindTexture(GL_TEXTURE_2D, temp);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampling);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, sampling);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, &rawImage[0]);
+
+	m_Textures[idx] = temp;
+
+	return idx;
+}
+
+int Renderer::CreateParticleObject(
+int particleCount,
+float minPixelX, float minPixelY,
+float maxPixelX, float maxPixelY,
+float minPixelSizeX, float minPixelSizeY,
+float maxPixelSizeX, float maxPixelSizeY,
+float minPixelVelX, float minPixelVelY,
+float maxPixelVelX, float maxPixelVelY
+)
+{
+	int idx = -1;
+	for (int i = 0; i < MAX_PARTICLES; i++)
+	{
+		if (m_Particles[i].VBO == -1)
+		{
+			idx = i;
+			break;
+		}
+	}
+	if (idx == -1)
+	{
+		std::cout << "Can't create particle object more. " << std::endl;
+	}
+
+	float* particleVertices = new float[particleCount * 2 * 3 * (3 + 2 + 4)];
+	int particleFloatCount = particleCount * 2 * 3 * (3 + 2 + 4);
+	m_Particles[idx].VertexCount = particleCount * 2 * 3;
+
+	int particleVertIndex = 0;
+
+	for (int i = 0; i < particleCount; i++)
+	{
+		float particleInitPosX = minPixelX + (maxPixelX - minPixelX)*((float)rand() / (float)RAND_MAX);
+		float particleInitPosY = minPixelY + (maxPixelY - minPixelY)*((float)rand() / (float)RAND_MAX);
+		float particleSizeX = minPixelSizeX + (maxPixelSizeX - minPixelSizeX)*((float)rand() / (float)RAND_MAX);
+		float particleSizeY = minPixelSizeY + (maxPixelSizeY - minPixelSizeY)*((float)rand() / (float)RAND_MAX);
+
+		float randomValueX = minPixelVelX + (maxPixelVelX - minPixelVelX)*((float)rand() / (float)RAND_MAX);
+		float randomValueY = minPixelVelY + (maxPixelVelY - minPixelVelY)*((float)rand() / (float)RAND_MAX);
+		float randomValueZ = 1.f;
+		float randomStartTime = (((float)rand() / (float)RAND_MAX))*6.f;
+
+		particleVertices[particleVertIndex] = -particleSizeX / 2.f + particleInitPosX;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = -particleSizeY / 2.f + particleInitPosY;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueZ;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = 0.f;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = 0.f;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueX;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueY;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueZ;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomStartTime;
+		particleVertIndex++;
+
+		particleVertices[particleVertIndex] = particleSizeX / 2.f + particleInitPosX;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = -particleSizeY / 2.f + particleInitPosY;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueZ;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = 1.f;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = 0.f;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueX;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueY;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueZ;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomStartTime;
+		particleVertIndex++;
+
+		particleVertices[particleVertIndex] = particleSizeX / 2.f + particleInitPosX;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = particleSizeY / 2.f + particleInitPosY;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueZ;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = 1.f;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = 1.f;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueX;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueY;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueZ;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomStartTime;
+		particleVertIndex++;
+
+		particleVertices[particleVertIndex] = -particleSizeX / 2.f + particleInitPosX;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = -particleSizeY / 2.f + particleInitPosY;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueZ;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = 0.f;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = 0.f;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueX;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueY;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueZ;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomStartTime;
+		particleVertIndex++;
+
+		particleVertices[particleVertIndex] = particleSizeX / 2.f + particleInitPosX;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = particleSizeY / 2.f + particleInitPosY;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueZ;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = 1.f;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = 1.f;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueX;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueY;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueZ;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomStartTime;
+		particleVertIndex++;
+
+		particleVertices[particleVertIndex] = -particleSizeX / 2.f + particleInitPosX;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = particleSizeY / 2.f + particleInitPosY;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueZ;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = 0.f;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = 1.f;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueX;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueY;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomValueZ;
+		particleVertIndex++;
+		particleVertices[particleVertIndex] = randomStartTime;
+		particleVertIndex++;
+	}
+
+	GLuint temp;
+	glGenBuffers(1, &temp);
+	glBindBuffer(GL_ARRAY_BUFFER, temp);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*particleFloatCount, particleVertices, GL_STATIC_DRAW);
+	m_Particles[idx].VBO = temp;
+	return idx;
+}
+
+bool Renderer::DeleteTexture(int idx, bool printLog)
+{
+	if (idx <= 0)
+	{
+		if (printLog)
+		{
+			cout << "Error : Texture index is negative " << idx << endl;
+		}
+		return false;
+	}
+	if (m_Textures[idx] == -1)
+	{
+		if (printLog)
+		{
+			cout << "Error : Texture " << idx << " already deleted. " << endl;
+		}
+		return false;
+	}
+	glDeleteTextures(1, (const GLuint*)(&m_Textures[idx]));
+	m_Textures[idx] = -1;
+
+	return true;
+}
+
+bool Renderer::DeleteParticle(int idx, bool printLog)
+{
+	if (idx <= 0)
+	{
+		if (printLog)
+		{
+			cout << "Error : Particle index is negative " << idx << endl;
+		}
+		return false;
+	}
+	if (m_Particles[idx].VBO == -1)
+	{
+		if (printLog)
+		{
+			cout << "Error : Particle " << idx << " already deleted. " << endl;
+		}
+		return false;
+	}
+	glDeleteBuffers(1, (const GLuint*)(&m_Particles[idx].VBO));
+	m_Particles[idx].VBO = -1;
+	m_Particles[idx].VertexCount = -1;
+
+	return true;
 }
 
 void Renderer::AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum ShaderType)
@@ -106,6 +501,7 @@ GLuint Renderer::CompileShaders(char* filenameVS, char* filenameFS)
 
 	if (ShaderProgram == 0) { //쉐이더 프로그램이 만들어졌는지 확인
 		fprintf(stderr, "Error creating shader program\n");
+		assert(0);
 	}
 
 	std::string vs, fs;
@@ -113,12 +509,14 @@ GLuint Renderer::CompileShaders(char* filenameVS, char* filenameFS)
 	//shader.vs 가 vs 안으로 로딩됨
 	if (!ReadFile(filenameVS, &vs)) {
 		printf("Error compiling vertex shader\n");
+		assert(0);
 		return -1;
 	};
 
 	//shader.fs 가 fs 안으로 로딩됨
 	if (!ReadFile(filenameFS, &fs)) {
 		printf("Error compiling fragment shader\n");
+		assert(0);
 		return -1;
 	};
 
@@ -141,6 +539,7 @@ GLuint Renderer::CompileShaders(char* filenameVS, char* filenameFS)
 		// shader program 로그를 받아옴
 		glGetProgramInfoLog(ShaderProgram, sizeof(ErrorLog), NULL, ErrorLog);
 		std::cout << filenameVS << ", " << filenameFS << " Error linking shader program\n" << ErrorLog;
+		assert(0);
 		return -1;
 	}
 
@@ -149,28 +548,53 @@ GLuint Renderer::CompileShaders(char* filenameVS, char* filenameFS)
 	if (!Success) {
 		glGetProgramInfoLog(ShaderProgram, sizeof(ErrorLog), NULL, ErrorLog);
 		std::cout << filenameVS << ", " << filenameFS << " Error validating shader program\n" << ErrorLog;
+		assert(0);
 		return -1;
 	}
 
 	glUseProgram(ShaderProgram);
-	std::cout << filenameVS << ", " << filenameFS << " Shader compiling is done.";
+	std::cout << filenameVS << ", " << filenameFS << " Shader compiling is done.\n";
 
 	return ShaderProgram;
 }
 
-void Renderer::DrawSolidRect(float x, float y, float z, float size, float r, float g, float b, float a)
+void Renderer::DrawSolidRect(
+	float x, float y, float z, 
+	float size, 
+	float r, float g, float b, float a,
+	bool bShadow)
 {
-	float newX, newY;
-
-	GetGLPosition(x, y, &newX, &newY);
+	if (bShadow)
+	{
+		DrawShadow(x, y, 0, size, size, size, r, g, b, a, m_ShadowTexture);
+	}
 
 	//Program select
-	glUseProgram(m_SolidRectShader);
+	GLuint shader = m_SolidRectShader;
 
-	glUniform4f(glGetUniformLocation(m_SolidRectShader, "u_Trans"), newX, newY, 0, size);
-	glUniform4f(glGetUniformLocation(m_SolidRectShader, "u_Color"), r, g, b, a);
+	glUseProgram(shader);
 
-	int attribPosition = glGetAttribLocation(m_SolidRectShader, "a_Position");
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
+	GLuint uProjView = glGetUniformLocation(shader, "u_ProjView");
+	GLuint uRotToCam = glGetUniformLocation(shader, "u_RotToCam");
+	GLuint uTrans = glGetUniformLocation(shader, "u_Trans");
+	GLuint uScale = glGetUniformLocation(shader, "u_Scale");
+	GLuint uColor = glGetUniformLocation(shader, "u_Color");
+	GLuint uDepth = glGetUniformLocation(shader, "u_Depth");
+
+	glUniform3f(uTrans, x, y + z + size / 2.f, 0.f);
+	glUniform3f(uScale, size, size, size);
+	glUniform4f(uColor, r, g, b, a);
+	glUniform1f(uDepth, (y + MAX_DEPTH_RANGE / 2.f) / MAX_DEPTH_RANGE);
+	glUniformMatrix4fv(uProjView, 1, GL_FALSE, &m_m4ProjView[0][0]);
+	glUniformMatrix4fv(uRotToCam, 1, GL_FALSE, &m_m4Model[0][0]);
+
+	int attribPosition = glGetAttribLocation(shader, "a_Position");
 	glEnableVertexAttribArray(attribPosition);
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBORect);
 	glVertexAttribPointer(attribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, 0);
@@ -180,10 +604,595 @@ void Renderer::DrawSolidRect(float x, float y, float z, float size, float r, flo
 	glDisableVertexAttribArray(attribPosition);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glDisable(GL_BLEND);
 }
 
-void Renderer::GetGLPosition(float x, float y, float *newX, float *newY)
+void Renderer::DrawSolidRect(
+	float x, float y, float z, 
+	float sizeX, float sizeY, float sizeZ,
+	float r, float g, float b, float a,
+	bool bShadow)
 {
-	*newX = x * 2.f / m_WindowSizeX;
-	*newY = y * 2.f / m_WindowSizeY;
+	if (bShadow)
+	{
+		DrawShadow(x, y, 0, sizeX, sizeY, sizeZ, r, g, b, a, m_ShadowTexture);
+	}
+
+	//Program select
+	GLuint shader = m_SolidRectShader;
+
+	glUseProgram(shader);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
+	GLuint uProjView = glGetUniformLocation(shader, "u_ProjView");
+	GLuint uRotToCam = glGetUniformLocation(shader, "u_RotToCam");
+	GLuint uTrans = glGetUniformLocation(shader, "u_Trans");
+	GLuint uScale = glGetUniformLocation(shader, "u_Scale");
+	GLuint uColor = glGetUniformLocation(shader, "u_Color");
+	GLuint uDepth = glGetUniformLocation(shader, "u_Depth");
+
+	glUniform3f(uTrans, x, y + z + sizeY / 2.f, 0.f);
+	glUniform3f(uScale, sizeX, sizeY, sizeZ);
+	glUniform4f(uColor, r, g, b, a);
+	glUniform1f(uDepth, (y + MAX_DEPTH_RANGE / 2.f) / MAX_DEPTH_RANGE);
+	glUniformMatrix4fv(uProjView, 1, GL_FALSE, &m_m4ProjView[0][0]);
+	glUniformMatrix4fv(uRotToCam, 1, GL_FALSE, &m_m4Model[0][0]);
+
+	int attribPosition = glGetAttribLocation(shader, "a_Position");
+	glEnableVertexAttribArray(attribPosition);
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBORect);
+	glVertexAttribPointer(attribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, 0);
+
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glDisableVertexAttribArray(attribPosition);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glDisable(GL_BLEND);
+}
+
+void Renderer::DrawSolidRectBorder(
+	float x, float y, float z,
+	float sizeX, float sizeY, float sizeZ,
+	float r, float g, float b, float a)
+{
+	//Program select
+	GLuint shader = m_SolidRectShader;
+
+	glUseProgram(shader);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
+	GLuint uProjView = glGetUniformLocation(shader, "u_ProjView");
+	GLuint uRotToCam = glGetUniformLocation(shader, "u_RotToCam");
+	GLuint uTrans = glGetUniformLocation(shader, "u_Trans");
+	GLuint uScale = glGetUniformLocation(shader, "u_Scale");
+	GLuint uColor = glGetUniformLocation(shader, "u_Color");
+	GLuint uDepth = glGetUniformLocation(shader, "u_Depth");
+
+	glUniform3f(uTrans, x, y + z, 0.f);
+	glUniform3f(uScale, sizeX, sizeY, sizeZ);
+	glUniform4f(uColor, r, g, b, a);
+	glUniform1f(uDepth, (y + MAX_DEPTH_RANGE / 2.f) / MAX_DEPTH_RANGE);
+	glUniformMatrix4fv(uProjView, 1, GL_FALSE, &m_m4ProjView[0][0]);
+	glUniformMatrix4fv(uRotToCam, 1, GL_FALSE, &m_m4Model[0][0]);
+
+	int attribPosition = glGetAttribLocation(shader, "a_Position");
+	glEnableVertexAttribArray(attribPosition);
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBORectBorder);
+	glVertexAttribPointer(attribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, 0);
+
+	glDrawArrays(GL_LINE_LOOP, 0, 4);
+
+	glDisableVertexAttribArray(attribPosition);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glDisable(GL_BLEND);
+}
+
+void Renderer::DrawSolidRectGauge(
+	float x, float y, float z,
+	float rx, float ry, float rz,
+	float sizeX, float sizeY, float sizeZ,
+	float r, float g, float b, float a,
+	float percent,
+	bool bShadow)
+{
+	//Program select
+	GLuint shader = m_SOlidRectGaugeShader;
+
+	glUseProgram(shader);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
+	GLuint uProjView = glGetUniformLocation(shader, "u_ProjView");
+	GLuint uRotToCam = glGetUniformLocation(shader, "u_RotToCam");
+	GLuint uTrans = glGetUniformLocation(shader, "u_Trans");
+	GLuint uScale = glGetUniformLocation(shader, "u_Scale");
+	GLuint uColor = glGetUniformLocation(shader, "u_Color");
+	GLuint uDepth = glGetUniformLocation(shader, "u_Depth");
+	GLuint uGauge = glGetUniformLocation(shader, "u_Gauge");
+
+	glUniform3f(uTrans, x+rx, y+ry+z + ry, 0.f);
+	glUniform3f(uScale, sizeX, sizeY, sizeZ);
+	glUniform4f(uColor, r, g, b, a);
+	glUniform1f(uGauge, percent/100.f);
+	glUniform1f(uDepth, (y + MAX_DEPTH_RANGE / 2.f) / MAX_DEPTH_RANGE);
+	glUniformMatrix4fv(uProjView, 1, GL_FALSE, &m_m4ProjView[0][0]);
+	glUniformMatrix4fv(uRotToCam, 1, GL_FALSE, &m_m4Model[0][0]);
+
+	int attribPosition = glGetAttribLocation(shader, "a_Position");
+	glEnableVertexAttribArray(attribPosition);
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBORect);
+	glVertexAttribPointer(attribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, 0);
+
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glDisableVertexAttribArray(attribPosition);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glDisable(GL_BLEND);
+	
+	DrawSolidRectBorder(
+		x + rx, y + ry + z + ry, 0.f,
+		sizeX, sizeY, sizeZ,
+		r, g, b, a);
+}
+
+void Renderer::DrawTextureRect(
+	float x, float y, float z,
+	float sizeX, float sizeY, float sizeZ,
+	float r, float g, float b, float a,
+	int textureID,
+	bool bShadow)
+{
+	if(textureID < 0)
+	{
+		std::cout << "Texture ID is negative : " << textureID << std::endl;
+	}
+	textureID = m_Textures[textureID];
+	if (textureID == -1)
+	{
+		std::cout << "Texture ID is wrong : " << textureID << std::endl;
+	}
+
+	if (bShadow)
+	{
+		DrawShadow(x, y, 0, sizeX, sizeY, sizeZ, r, g, b, a, m_ShadowTexture);
+	}
+
+	//Program select
+	GLuint shader = m_TextureRectShader;
+
+	glUseProgram(shader);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
+	GLuint uProjView = glGetUniformLocation(shader, "u_ProjView");
+	GLuint uRotToCam = glGetUniformLocation(shader, "u_RotToCam");
+	GLuint uTrans = glGetUniformLocation(shader, "u_Trans");
+	GLuint uScale = glGetUniformLocation(shader, "u_Scale");
+	GLuint uColor = glGetUniformLocation(shader, "u_Color");
+	GLuint uTexture = glGetUniformLocation(shader, "u_Texture");
+	GLuint uDepth = glGetUniformLocation(shader, "u_Depth");
+
+	glUniformMatrix4fv(uProjView, 1, GL_FALSE, &m_m4ProjView[0][0]);
+	glUniformMatrix4fv(uRotToCam, 1, GL_FALSE, &m_m4Model[0][0]);
+	glUniform3f(uTrans, x, y + z + sizeY / 2.f, 0.f);
+	glUniform3f(uScale, sizeX, sizeY, sizeZ);
+	glUniform4f(uColor, r, g, b, a);
+	glUniform1i(uTexture, 0);
+	glUniform1f(uDepth, (y + MAX_DEPTH_RANGE /2.f)/ MAX_DEPTH_RANGE);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	int attribPosition = glGetAttribLocation(shader, "a_Position");
+	glEnableVertexAttribArray(attribPosition);
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBORect);
+	glVertexAttribPointer(attribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, 0);
+
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glDisableVertexAttribArray(attribPosition);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glDisable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+}
+
+void Renderer::DrawTextureRectAnim(
+	float x, float y, float z,
+	float sizeX, float sizeY, float sizeZ,
+	float r, float g, float b, float a,
+	int textureID,
+	int totalX,
+	int totalY, 
+	int currX, 
+	int currY,
+	bool bShadow)
+{
+	if (textureID < 0)
+	{
+		std::cout << "Texture ID is negative : " << textureID << std::endl;
+	}
+	textureID = m_Textures[textureID];
+	if (textureID == -1)
+	{
+		std::cout << "Texture ID is wrong : " << textureID << std::endl;
+	}
+
+	if (bShadow)
+	{
+		DrawShadow(x, y, 0, sizeX, sizeY, sizeZ, r, g, b, a, m_ShadowTexture);
+	}
+
+	//Program select
+	GLuint shader = m_TextureRectAnimShader;
+
+	glUseProgram(shader);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
+	GLuint uProjView = glGetUniformLocation(shader, "u_ProjView");
+	GLuint uRotToCam = glGetUniformLocation(shader, "u_RotToCam");
+	GLuint uTrans = glGetUniformLocation(shader, "u_Trans");
+	GLuint uScale = glGetUniformLocation(shader, "u_Scale");
+	GLuint uColor = glGetUniformLocation(shader, "u_Color");
+	GLuint uTexture = glGetUniformLocation(shader, "u_Texture");
+	GLuint uDepth = glGetUniformLocation(shader, "u_Depth");
+
+	GLuint uTotalSeqX = glGetUniformLocation(shader, "u_TotalSeqX");
+	GLuint uTotalSeqY = glGetUniformLocation(shader, "u_TotalSeqY");
+	GLuint uCurrSeqX = glGetUniformLocation(shader, "u_CurrSeqX");
+	GLuint uCurrSeqY = glGetUniformLocation(shader, "u_CurrSeqY");
+
+
+	glUniformMatrix4fv(uProjView, 1, GL_FALSE, &m_m4ProjView[0][0]);
+	glUniformMatrix4fv(uRotToCam, 1, GL_FALSE, &m_m4Model[0][0]);
+	glUniform3f(uTrans, x, y+z+sizeY/2.f, 0.f);
+	glUniform3f(uScale, sizeX, sizeY, sizeZ);
+	glUniform4f(uColor, r, g, b, a);
+	glUniform1i(uTexture, 0);
+	glUniform1f(uDepth, (y + MAX_DEPTH_RANGE / 2.f) / MAX_DEPTH_RANGE);
+	glUniform1f(uTotalSeqX, (float)totalX);
+	glUniform1f(uTotalSeqY, (float)totalY);
+	glUniform1f(uCurrSeqX, (float)currX);
+	glUniform1f(uCurrSeqY, (float)currY);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	int attribPosition = glGetAttribLocation(shader, "a_Position");
+	glEnableVertexAttribArray(attribPosition);
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBORect);
+	glVertexAttribPointer(attribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, 0);
+
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glDisableVertexAttribArray(attribPosition);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glDisable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+}
+
+void Renderer::DrawShadow(
+	float x, float y, float z,
+	float sizeX, float sizeY, float sizeZ,
+	float r, float g, float b, float a,
+	int textureID)
+{
+	if (textureID < 0)
+	{
+		std::cout << "Texture ID is negative : " << textureID << std::endl;
+	}
+	textureID = m_Textures[textureID];
+	if (textureID == -1)
+	{
+		std::cout << "Texture ID is wrong : " << textureID << std::endl;
+	}
+
+	//Program select
+	GLuint shader = m_TextureRectShader;
+
+	glUseProgram(shader);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
+	GLuint uProjView = glGetUniformLocation(shader, "u_ProjView");
+	GLuint uRotToCam = glGetUniformLocation(shader, "u_RotToCam");
+	GLuint uTrans = glGetUniformLocation(shader, "u_Trans");
+	GLuint uScale = glGetUniformLocation(shader, "u_Scale");
+	GLuint uColor = glGetUniformLocation(shader, "u_Color");
+	GLuint uTexture = glGetUniformLocation(shader, "u_Texture");
+	GLuint uDepth = glGetUniformLocation(shader, "u_Depth");
+
+	glUniformMatrix4fv(uProjView, 1, GL_FALSE, &m_m4ProjView[0][0]);
+	glUniformMatrix4fv(uRotToCam, 1, GL_FALSE, &m_m4Model[0][0]);
+	glUniform3f(uTrans, x, y, 0);
+	glUniform3f(uScale, sizeX, 7.f, 1.f);
+	glUniform4f(uColor, r, g, b, a);
+	glUniform1i(uTexture, 0);
+	glUniform1f(uDepth, (y + MAX_DEPTH_RANGE / 2.f + 1.f) / MAX_DEPTH_RANGE);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	int attribPosition = glGetAttribLocation(shader, "a_Position");
+	glEnableVertexAttribArray(attribPosition);
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBORect);
+	glVertexAttribPointer(attribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, 0);
+
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glDisableVertexAttribArray(attribPosition);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glDisable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+}
+
+void Renderer::DrawGround(
+	float x, float y, float z,
+	float sizeX, float sizeY, float sizeZ,
+	float r, float g, float b, float a,
+	int textureID,
+	float depth)
+{
+	if (textureID < 0)
+	{
+		std::cout << "Texture ID is negative : " << textureID << std::endl;
+	}
+	textureID = m_Textures[textureID];
+	if (textureID == -1)
+	{
+		std::cout << "Texture ID is wrong : " << textureID << std::endl;
+	}
+
+	//Program select
+	GLuint shader = m_TextureRectShader;
+
+	glUseProgram(shader);
+
+	glDisable(GL_BLEND);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
+	GLuint uProjView = glGetUniformLocation(shader, "u_ProjView");
+	GLuint uRotToCam = glGetUniformLocation(shader, "u_RotToCam");
+	GLuint uTrans = glGetUniformLocation(shader, "u_Trans");
+	GLuint uScale = glGetUniformLocation(shader, "u_Scale");
+	GLuint uColor = glGetUniformLocation(shader, "u_Color");
+	GLuint uTexture = glGetUniformLocation(shader, "u_Texture");
+	GLuint uDepth = glGetUniformLocation(shader, "u_Depth");
+
+	glUniformMatrix4fv(uProjView, 1, GL_FALSE, &m_m4ProjView[0][0]);
+	glUniformMatrix4fv(uRotToCam, 1, GL_FALSE, &m_m4Model[0][0]);
+	glUniform3f(uTrans, x, y, z);
+	glUniform3f(uScale, sizeX, sizeY, sizeZ);
+	glUniform4f(uColor, r, g, b, a);
+	glUniform1i(uTexture, 0);
+	glUniform1f(uDepth, depth);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	int attribPosition = glGetAttribLocation(shader, "a_Position");
+	glEnableVertexAttribArray(attribPosition);
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBORect);
+	glVertexAttribPointer(attribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, 0);
+
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glDisableVertexAttribArray(attribPosition);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glDisable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+}
+
+void Renderer::DrawParticle(
+	int particleObjectID,
+	float x, float y, float z, 
+	float size, 
+	float r, float g, float b, float a, 
+	float gDirX, float gDirY, 
+	GLuint texID, 
+	float ratio, 
+	float timeInSeconds)
+{
+	if (texID < 0)
+	{
+		std::cout << "Texture ID is negative : " << texID << std::endl;
+	}
+	texID = m_Textures[texID];
+	if (texID == -1)
+	{
+		std::cout << "Texture ID is wrong : " << texID << std::endl;
+	}
+
+	GLuint shader = m_ParticleShader;
+
+	//Program select
+	glUseProgram(shader);
+
+	//Enable alpha blend
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+	//glDepthMask(GL_FALSE);
+
+	int attribPosition = glGetAttribLocation(shader, "a_Position");
+	int attribTexPos = glGetAttribLocation(shader, "a_TexPos");
+	int attribVelocity = glGetAttribLocation(shader, "a_Velocity");
+
+	glEnableVertexAttribArray(attribPosition);
+	glEnableVertexAttribArray(attribTexPos);
+	glEnableVertexAttribArray(attribVelocity);
+
+	glBindBuffer(GL_ARRAY_BUFFER, m_Particles[particleObjectID].VBO);
+
+	glVertexAttribPointer(attribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, 0);
+	glVertexAttribPointer(attribTexPos, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (GLvoid*)(sizeof(float) * 3));
+	glVertexAttribPointer(attribVelocity, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (GLvoid*)(sizeof(float) * 5));
+
+	GLuint uProjView = glGetUniformLocation(shader, "u_ProjView");
+	GLuint uRotToCam = glGetUniformLocation(shader, "u_RotToCam");
+	GLuint uElapsedTime = glGetUniformLocation(shader, "u_ElapsedTime");
+	GLuint uTexture = glGetUniformLocation(shader, "u_Texture");
+	GLuint uTrans = glGetUniformLocation(shader, "u_Trans");
+	GLuint uScale = glGetUniformLocation(shader, "u_Scale");
+	GLuint uColor = glGetUniformLocation(shader, "u_Color");
+	GLuint uTrailDir = glGetUniformLocation(shader, "u_TrailDir");
+	GLuint uDepth = glGetUniformLocation(shader, "u_Depth");
+	GLuint uMaxTime = glGetUniformLocation(shader, "u_MaxTime");
+	
+	glUniformMatrix4fv(uProjView, 1, GL_FALSE, &m_m4ProjView[0][0]);
+	glUniformMatrix4fv(uRotToCam, 1, GL_FALSE, &m_m4Model[0][0]);
+	glUniform1f(uElapsedTime, timeInSeconds);
+	glUniform1i(uTexture, 0);
+	glUniform3f(uTrans, x, y, z);
+	glUniform3f(uScale, size, size, size);
+	glUniform4f(uColor, r, g, b, a);
+	glUniform3f(uTrailDir, gDirX, gDirY, 0);
+	glUniform1f(uDepth, (y + MAX_DEPTH_RANGE / 2.f) / MAX_DEPTH_RANGE);
+	glUniform1f(uMaxTime, 6.f);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texID);
+
+	GLuint count = m_Particles[particleObjectID].VertexCount * ratio;
+	if (count > m_Particles[particleObjectID].VertexCount)
+	{
+		count = m_Particles[particleObjectID].VertexCount;
+	}
+	glDrawArrays(GL_TRIANGLES, 0, count);
+
+	glDisableVertexAttribArray(attribPosition);
+	glDisableVertexAttribArray(attribTexPos);
+	glDisableVertexAttribArray(attribVelocity);
+
+	//glDepthMask(GL_TRUE);
+}
+
+void Renderer::DrawParticle(
+	int particleObjectID,
+	float x, float y, float z,
+	float size,
+	float r, float g, float b, float a,
+	float gDirX, float gDirY,
+	GLuint texID,
+	float ratio,
+	float timeInSeconds,
+	float depth)
+{
+	if (texID < 0)
+	{
+		std::cout << "Texture ID is negative : " << texID << std::endl;
+	}
+	texID = m_Textures[texID];
+	if (texID == -1)
+	{
+		std::cout << "Texture ID is wrong : " << texID << std::endl;
+	}
+
+	GLuint shader = m_ParticleShader;
+
+	//Program select
+	glUseProgram(shader);
+
+	//Enable alpha blend
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+	//glDepthMask(GL_FALSE);
+
+	int attribPosition = glGetAttribLocation(shader, "a_Position");
+	int attribTexPos = glGetAttribLocation(shader, "a_TexPos");
+	int attribVelocity = glGetAttribLocation(shader, "a_Velocity");
+
+	glEnableVertexAttribArray(attribPosition);
+	glEnableVertexAttribArray(attribTexPos);
+	glEnableVertexAttribArray(attribVelocity);
+
+	glBindBuffer(GL_ARRAY_BUFFER, m_Particles[particleObjectID].VBO);
+
+	glVertexAttribPointer(attribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, 0);
+	glVertexAttribPointer(attribTexPos, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (GLvoid*)(sizeof(float) * 3));
+	glVertexAttribPointer(attribVelocity, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (GLvoid*)(sizeof(float) * 5));
+
+	GLuint uProjView = glGetUniformLocation(shader, "u_ProjView");
+	GLuint uRotToCam = glGetUniformLocation(shader, "u_RotToCam");
+	GLuint uElapsedTime = glGetUniformLocation(shader, "u_ElapsedTime");
+	GLuint uTexture = glGetUniformLocation(shader, "u_Texture");
+	GLuint uTrans = glGetUniformLocation(shader, "u_Trans");
+	GLuint uScale = glGetUniformLocation(shader, "u_Scale");
+	GLuint uColor = glGetUniformLocation(shader, "u_Color");
+	GLuint uTrailDir = glGetUniformLocation(shader, "u_TrailDir");
+	GLuint uDepth = glGetUniformLocation(shader, "u_Depth");
+	GLuint uMaxTime = glGetUniformLocation(shader, "u_MaxTime");
+
+	glUniformMatrix4fv(uProjView, 1, GL_FALSE, &m_m4ProjView[0][0]);
+	glUniformMatrix4fv(uRotToCam, 1, GL_FALSE, &m_m4Model[0][0]);
+	glUniform1f(uElapsedTime, timeInSeconds);
+	glUniform1i(uTexture, 0);
+	glUniform3f(uTrans, x, y, z);
+	glUniform3f(uScale, size, size, size);
+	glUniform4f(uColor, r, g, b, a);
+	glUniform3f(uTrailDir, gDirX, gDirY, 0);
+	glUniform1f(uDepth, depth);
+	glUniform1f(uMaxTime, 6.f);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texID);
+
+	GLuint count = m_Particles[particleObjectID].VertexCount * ratio;
+	if (count > m_Particles[particleObjectID].VertexCount)
+	{
+		count = m_Particles[particleObjectID].VertexCount;
+	}
+	glDrawArrays(GL_TRIANGLES, 0, count);
+
+	glDisableVertexAttribArray(attribPosition);
+	glDisableVertexAttribArray(attribTexPos);
+	glDisableVertexAttribArray(attribVelocity);
+
+	//glDepthMask(GL_TRUE);
 }

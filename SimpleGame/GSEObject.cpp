@@ -72,6 +72,12 @@ void GSEObject::GetVel(float* x, float* y, float* z)
 	*z = m_velZ;
 }
 
+float GSEObject::GetVelMag()
+{
+	float mag = sqrtf(m_velX * m_velX + m_velY * m_velY + m_velZ * m_velZ);
+	return mag;
+}
+
 void GSEObject::SetAcc(float x, float y, float z)
 {
 	m_accX = x;
@@ -89,6 +95,11 @@ void GSEObject::SetForce(float x, float y, float z)
 void GSEObject::SetType(int type)
 {
 	m_type = type;
+}
+
+int GSEObject::GetType()
+{
+	return m_type;
 }
 
 void GSEObject::Draw(Renderer* renderer)

@@ -112,6 +112,23 @@ bool GSEObjectMgr::DeleteObject(int id)
 	return false;
 }
 
+void GSEObjectMgr::DoGarbageCollect()
+{
+	// find garbage & delete it
+	for (int i = 0; i < MAX_NUM_OBJECT; ++i) {
+		if (m_Objects[i] != NULL) {
+			// Bullet garbage
+			int type = m_Objects[i]->GetType();
+			if (type == TYPE_BULLET) {
+				float mag = m_Objects[i]->GetVelMag();
+				if (mag < FLT_EPSILON) {
+					DeleteObject(i);
+				}
+			}
+		}
+	}
+}
+
 void GSEObjectMgr::DrawAllObjects(Renderer* renderer, float elapsedTime)
 {
 	for (int i = 0; i < MAX_NUM_OBJECT; ++i) {
@@ -129,3 +146,4 @@ void GSEObjectMgr::UpdateAllObjects(float elapsedTime)
 		}
 	}
 }
+

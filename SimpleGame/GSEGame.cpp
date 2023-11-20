@@ -68,6 +68,7 @@ void GSEGame::DrawAll(float elapsedTime)
 	// objmgr
 	if (m_Renderer != NULL) {
 		m_ObjectMgr->UpdateAllObjects(elapsedTime);
+		m_ObjectMgr->DoGarbageCollect();
 		m_ObjectMgr->DrawAllObjects(m_Renderer, elapsedTime);
 	}
 	m_gameTime += elapsedTime;

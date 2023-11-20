@@ -1,6 +1,6 @@
 #pragma once
 
-#define MAX_NUM_OBJECT 100000
+#define MAX_NUM_OBJECT 1000
 #define GRAVITY 9.8f
 
 // Type definitions

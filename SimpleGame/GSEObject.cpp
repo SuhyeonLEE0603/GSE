@@ -26,6 +26,12 @@ GSEObject::GSEObject()
 	m_forceZ = 0.f;
 
 	m_type = TYPE_DEFAULT;
+	
+	m_coolTime = 0.1f;
+	m_remainCoolTime = m_coolTime;
+	m_isCoolTimeExpired = false;
+
+	m_r = m_g = m_b = m_a = 1.f;
 }
 
 GSEObject::~GSEObject()
@@ -102,9 +108,52 @@ int GSEObject::GetType()
 	return m_type;
 }
 
+void GSEObject::SetColor(float r, float g, float b, float a)
+{
+	m_r = r;
+	m_g = g;
+	m_b = b;
+	m_a = a;
+}
+
+void GSEObject::GetBBMin(float* x, float* y, float* z)
+{
+	*x = m_posX - m_sizeX / 2.f;
+	*y = m_posY - m_sizeY / 2.f;
+	*z = m_posZ - m_sizeZ / 2.f;
+}
+
+void GSEObject::GetBBMax(float* x, float* y, float* z)
+{
+	*x = m_posX + m_sizeX / 2.f;
+	*y = m_posY + m_sizeY / 2.f;
+	*z = m_posZ + m_sizeZ / 2.f;
+}
+
+void GSEObject::SetCoolTime(float coolTime)
+{
+	m_coolTime = coolTime;
+}
+
+float GSEObject::GetCoolTime()
+{
+	return m_coolTime;
+}
+
+bool GSEObject::IsCoolTimeExpired()
+{
+	return m_isCoolTimeExpired;
+}
+
+void GSEObject::ResetCoolTimeExpired()
+{
+	m_remainCoolTime = m_coolTime;
+}
+
 void GSEObject::Draw(Renderer* renderer)
 {
-	renderer->DrawSolidRect(m_posX, m_posY, m_posZ, m_sizeX, 1, 1, 1, 1);
+	renderer->DrawSolidRect(m_posX, m_posY, m_posZ, m_sizeX,
+		m_r, m_g, m_b, m_a);
 }
 
 void GSEObject::Update(float elapsedTime)
@@ -180,6 +229,14 @@ void GSEObject::Update(float elapsedTime)
 	m_posY = m_posY + m_velY * t;
 	m_posZ = m_posZ + m_velZ * t;
 
+	m_remainCoolTime -= elapsedTime;
+	if (m_remainCoolTime < FLT_EPSILON) {
+		m_isCoolTimeExpired = true;
+	}
+	else {
+		m_isCoolTimeExpired = false;
+
+	}
 
 }
 

@@ -10,7 +10,7 @@ GSEGame::GSEGame(int windowSizeX, int windowSizeY)
 	// create hero object
 	m_Heroid = m_ObjectMgr->AddObject(
 		0, 0, 0,
-		30, 30, 30,
+		30, 30, 1,
 		1,
 		0, 0, 0,
 		0, 0, 0,
@@ -18,20 +18,20 @@ GSEGame::GSEGame(int windowSizeX, int windowSizeY)
 		TYPE_HERO);
 
 	// create test objects
-	/*for (int i = 0; i < 1000; ++i) {
+	for (int i = 0; i < 10; ++i) {
 		float x = (500.f * (float)rand() / (float)RAND_MAX) - 250.f;
 		float y = (500.f * (float)rand() / (float)RAND_MAX) - 250.f;
-		float z = (500.f * (float)rand() / (float)RAND_MAX) - 250.f;
+		float z = 0.f;
 
-		float sX = 5.f * (float)rand() / (float)RAND_MAX;
-		float sY = 5.f * (float)rand() / (float)RAND_MAX;
-		float sZ = 5.f * (float)rand() / (float)RAND_MAX;
+		float sX = 50.f * (float)rand() / (float)RAND_MAX;
+		float sY = 50.f * (float)rand() / (float)RAND_MAX;
+		float sZ = 1.f; // 50.f * (float)rand() / (float)RAND_MAX;
 
 		float mass = 1.f;
 
 		float velX = (10.f * (float)rand() / (float)RAND_MAX) - 5.f;
 		float velY = (10.f * (float)rand() / (float)RAND_MAX) - 5.f;
-		float velZ = (10.f * (float)rand() / (float)RAND_MAX) - 5.f;
+		float velZ = 0.f;
 
 		float accX = 0.f;
 		float accY = 0.f;
@@ -48,7 +48,7 @@ GSEGame::GSEGame(int windowSizeX, int windowSizeY)
 			accX, accY, accZ,
 			forceX, forceY, forceZ,
 			TYPE_DEFAULT);
-	}*/
+	}
 
 }
 
@@ -69,6 +69,7 @@ void GSEGame::DrawAll(float elapsedTime)
 	if (m_Renderer != NULL) {
 		m_ObjectMgr->UpdateAllObjects(elapsedTime);
 		m_ObjectMgr->DoGarbageCollect();
+		m_ObjectMgr->DoAllObjectsOverlapTest();
 		m_ObjectMgr->DrawAllObjects(m_Renderer, elapsedTime);
 	}
 	m_gameTime += elapsedTime;
@@ -101,49 +102,56 @@ void GSEGame::KeyInput(GSEUserInterface* ui, float elapsedTime)
 	if (ui->Is_Spacebar_Down()) {
 
 		// bullet
-		// 1. get hero position
-		float vx, vy, vz;
-		float x, y, z;
-		m_ObjectMgr->GetObjectPos(m_Heroid, &x, &y, &z);
-		m_ObjectMgr->GetObjectVel(m_Heroid, &vx, &vy, &vz);
+		// 0. can hero shoot bullte (is cooltime expried?)
+		bool canSoot = m_ObjectMgr->IsCoolTimeExpired(m_Heroid);
+		if (canSoot) {
+			// 1. get hero position
+			float vx, vy, vz;
+			float x, y, z;
+			m_ObjectMgr->GetObjectPos(m_Heroid, &x, &y, &z);
+			m_ObjectMgr->GetObjectVel(m_Heroid, &vx, &vy, &vz);
 
-		// 2. clac bullet velocity
-		float mag = sqrtf(vx * vx + vy + vy);
-		float bulletVX = 1.f;
-		float bulletVY = 0.f;
-		float bulletSpeed = 1000.f;
-		float theta = m_gameTime * 10.f;
+			// 2. clac bullet velocity
+			float mag = sqrtf(vx * vx + vy + vy);
+			float bulletVX = 1.f;
+			float bulletVY = 0.f;
+			float bulletSpeed = 1000.f;
+			float theta = m_gameTime * 10.f;
 
-		float newBX = cos(theta) * bulletVX - sin(theta) * bulletVY;
-		float newBY = sin(theta) * bulletVX + cos(theta) * bulletVY;
+			float newBX = cos(theta) * bulletVX - sin(theta) * bulletVY;
+			float newBY = sin(theta) * bulletVX + cos(theta) * bulletVY;
 
-		newBX *= bulletSpeed;
-		newBY *= bulletSpeed;
+			newBX *= bulletSpeed;
+			newBY *= bulletSpeed;
 
-		m_ObjectMgr->AddObject(x, y, z,
-			5, 5, 5,
-			1,
-			newBX, newBY, 0,
-			0, 0, 0,
-			0, 0, 0,
-			TYPE_BULLET);
+			m_ObjectMgr->AddObject(x, y, z,
+				5, 5, 5,
+				1,
+				newBX, newBY, 0,
+				0, 0, 0,
+				0, 0, 0,
+				TYPE_BULLET);
 
-		//if (mag > FLT_EPSILON) {
-		//	vx = vx / mag;
-		//	vy = vy / mag;
+			//if (mag > FLT_EPSILON) {
+			//	vx = vx / mag;
+			//	vy = vy / mag;
 
-		//	bulletVX = bulletSpeed * vx;
-		//	bulletVY = bulletSpeed * vy;
+			//	bulletVX = bulletSpeed * vx;
+			//	bulletVY = bulletSpeed * vy;
 
-		//	// 3. add object (vel, pos)
-		//	m_ObjectMgr->AddObject(x, y, z,
-		//		20, 20, 20,
-		//		1,
-		//		bulletVX, bulletVY, 0,
-		//		0, 0, 0,
-		//		0, 0, 0,
-		//		TYPE_BULLET);
-		//}
+			//	// 3. add object (vel, pos)
+			//	m_ObjectMgr->AddObject(x, y, z,
+			//		20, 20, 20,
+			//		1,
+			//		bulletVX, bulletVY, 0,
+			//		0, 0, 0,
+			//		0, 0, 0,
+			//		TYPE_BULLET);
+			//}
+
+			m_ObjectMgr->ResetCoolTimeExpired(m_Heroid);
+		}
+		
 	}
 
 }

@@ -20,7 +20,7 @@ GSEGame::GSEGame(int windowSizeX, int windowSizeY)
 		-1);
 
 	// create test objects
-	for (int i = 0; i < 10; ++i) {
+	for (int i = 0; i < 100; ++i) {
 		float x = (500.f * (float)rand() / (float)RAND_MAX) - 250.f;
 		float y = (500.f * (float)rand() / (float)RAND_MAX) - 250.f;
 		float z = 0.f;

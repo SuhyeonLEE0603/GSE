@@ -27,7 +27,7 @@ GSEObject::GSEObject()
 
 	m_type = TYPE_DEFAULT;
 	
-	m_coolTime = 0.1f;
+	m_coolTime = 0.01f;
 	m_remainCoolTime = m_coolTime;
 	m_isCoolTimeExpired = false;
 
@@ -62,6 +62,11 @@ void GSEObject::GetPos(float* x, float* y, float* z)
 void GSEObject::SetMass(float mass)
 {
 	m_mass = mass;
+}
+
+float GSEObject::GetMass()
+{
+	return m_mass;
 }
 
 void GSEObject::SetVel(float x, float y, float z)
@@ -128,6 +133,39 @@ void GSEObject::GetBBMax(float* x, float* y, float* z)
 	*x = m_posX + m_sizeX / 2.f;
 	*y = m_posY + m_sizeY / 2.f;
 	*z = m_posZ + m_sizeZ / 2.f;
+}
+
+void GSEObject::SetID(int id)
+{
+	m_ID = id;
+}
+
+int GSEObject::GetID()
+{
+	return m_ID;
+}
+
+void GSEObject::SetParent(int id)
+{
+	m_parentID = id;
+}
+
+bool GSEObject::isAncestor(int id)
+{
+	if (m_parentID == id) {
+		return true;
+	}
+	return false;
+}
+
+void GSEObject::SetHP(float hp)
+{
+	m_HP = hp;
+}
+
+float GSEObject::GetHP()
+{
+	return m_HP;
 }
 
 void GSEObject::SetCoolTime(float coolTime)
